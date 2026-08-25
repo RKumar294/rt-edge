@@ -10,7 +10,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "assets/rt_edge_icon.png",
+      "src": "rt_edge_icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
