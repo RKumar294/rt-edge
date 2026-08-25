@@ -1,0 +1,19 @@
+{
+  "name": "RT EDGE \u2014 Trading Journal",
+  "short_name": "RT EDGE",
+  "description": "Personal options trading journal \u2014 Trade \u2022 Track \u2022 Learn \u2022 Evolve",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050807",
+  "theme_color": "#050807",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/rt_edge_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
