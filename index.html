@@ -109,24 +109,56 @@
 <script>
 let trades=JSON.parse(localStorage.getItem('tjp_trades')||'[]'), filter='all', reflections=JSON.parse(localStorage.getItem('tjp_reflections')||'[]');
 trades=trades.map(t=>({...t,tradeDate:t.tradeDate||((t.date||'').slice(0,10))}));
+function normalizeTradeDate(v){if(!v)return '';let x=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;let m=x.match(/^(\d{1,2})[\\/.-](\d{1,2})[\\/.-](\d{4})$/);return m?`${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`:x.slice(0,10)}
+trades=trades.map(t=>({...t,tradeDate:normalizeTradeDate(t.tradeDate||t.date)}));
+localStorage.setItem('tjp_trades',JSON.stringify(trades));
 const money=n=>'₹'+Math.round(n).toLocaleString('en-IN');
 const id=x=>document.getElementById(x);
 function show(s,el){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));id(s).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));el.classList.add('active');render()}
 function openModal(){id('editId').value='';id('modalTitle').textContent='Add Options Trade';id('modal').style.display='flex'} function closeModal(){id('modal').style.display='none'}
 function save(){localStorage.setItem('tjp_trades',JSON.stringify(trades))}
-function resetForm(){['strike','expiry','entry','exit','sl','target','charges','score','strategy','entryTime','exitTime','notes'].forEach(k=>{if(id(k))id(k).value=''});id('tradeDate').value=new Date().toISOString().slice(0,10);id('entryReason').value='Accurate Entry';id('exitReason').value='Target Hit';id('qty').value=1;id('lot').value=1;id('charges').value=0;id('score').value=80;id('slFollowed').checked=true;id('revenge').checked=false;id('shot').value='';id('instrument').value='NIFTY';id('account').value='Options';id('otype').value='CE';id('side').value='Buy'}
+function resetForm(){['strike','expiry','entry','exit','sl','target','charges','score','strategy','entryTime','exitTime','notes'].forEach(k=>{if(id(k))id(k).value=''});let now=new Date();id('tradeDate').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;id('entryReason').value='Accurate Entry';id('exitReason').value='Target Hit';id('qty').value=1;id('lot').value=1;id('charges').value=0;id('score').value=80;id('slFollowed').checked=true;id('revenge').checked=false;id('shot').value='';id('instrument').value='NIFTY';id('account').value='Options';id('otype').value='CE';id('side').value='Buy'}
 function saveTrade(){
 let entry=+id('entry').value||0,exit=+id('exit').value||0,qty=+id('qty').value||1,lot=+id('lot').value||1,side=id('side').value;
-let gross=(side==='Buy'?(exit-entry):(entry-exit))*qty*lot, pnl=gross-(+id('charges').value||0), sl=+id('sl').value||entry;
-let risk=Math.abs(entry-sl)*qty*lot, rr=risk?Math.abs(gross)/risk:0;
-let editId=+id('editId').value||0, old=trades.find(x=>x.id===editId);
-let tradeDate=id('tradeDate').value||new Date().toISOString().slice(0,10);
-let t={id:editId||Date.now(),date:tradeDate+'T00:00:00',tradeDate,instrument:id('instrument').value,account:id('account').value,otype:id('otype').value,side,strike:+id('strike').value||0,expiry:id('expiry').value,entry,exit,qty,lot,sl,target:+id('target').value||0,charges:+id('charges').value||0,pnl,rr,score:+id('score').value||0,strategy:id('strategy').value||'Unspecified',entryTime:id('entryTime').value,exitTime:id('exitTime').value,entryReason:id('entryReason').value,exitReason:id('exitReason').value,slFollowed:id('slFollowed').checked,revenge:id('revenge').checked,notes:id('notes').value,shot:old?.shot||null};
+let gross=(side==='Buy'?(exit-entry):(entry-exit))*qty*lot,pnl=gross-(+id('charges').value||0),sl=+id('sl').value||entry;
+let risk=Math.abs(entry-sl)*qty*lot,rr=risk?Math.abs(gross)/risk:0;
+let editId=+id('editId').value||0,old=trades.find(x=>x.id===editId);
+let selectedDate=normalizeTradeDate(id('tradeDate').value);
+if(!selectedDate){alert('Please select Trade Date');return}
+let t={
+ id:editId||Date.now(),
+ tradeDate:selectedDate,
+ date:selectedDate+'T00:00:00',
+ instrument:id('instrument').value,account:id('account').value,otype:id('otype').value,side,
+ strike:+id('strike').value||0,expiry:id('expiry').value,entry,exit,qty,lot,sl,
+ target:+id('target').value||0,charges:+id('charges').value||0,pnl,rr,
+ score:+id('score').value||0,strategy:id('strategy').value||'Unspecified',
+ entryTime:id('entryTime').value||'',exitTime:id('exitTime').value||'',
+ entryReason:id('entryReason').value||'Accurate Entry',
+ exitReason:id('exitReason').value||'Target Hit',
+ slFollowed:id('slFollowed').checked,revenge:id('revenge').checked,
+ notes:id('notes').value,shot:old?.shot||null
+};
 let file=id('shot').files[0];
-const finish=()=>{if(editId){let idx=trades.findIndex(x=>x.id===editId);if(idx>=0)trades[idx]=t}else trades.unshift(t);save();closeModal();resetForm();render()};
+const finish=()=>{
+ if(editId){let idx=trades.findIndex(x=>x.id===editId);if(idx>=0)trades[idx]=t}else trades.unshift(t);
+ localStorage.setItem('tjp_trades',JSON.stringify(trades));
+ closeModal();resetForm();render();
+};
 if(file){let r=new FileReader();r.onload=()=>{t.shot=r.result;finish()};r.readAsDataURL(file)}else finish()
 }
-function editTrade(i){let t=trades.find(x=>x.id===i);if(!t)return;id('editId').value=t.id;id('modalTitle').textContent='Edit Options Trade';id('instrument').value=t.instrument||'NIFTY';id('account').value=t.account||'Options';id('otype').value=t.otype||'CE';id('side').value=t.side||'Buy';id('strike').value=t.strike||'';id('expiry').value=t.expiry||'';id('entry').value=t.entry??'';id('exit').value=t.exit??'';id('qty').value=t.qty||1;id('lot').value=t.lot||1;id('sl').value=t.sl||'';id('target').value=t.target||'';id('charges').value=t.charges||0;id('score').value=t.score??80;id('strategy').value=t.strategy==='Unspecified'?'':(t.strategy||'');id('tradeDate').value=t.tradeDate||((t.date||'').slice(0,10));id('entryTime').value=t.entryTime||'';id('exitTime').value=t.exitTime||'';id('entryReason').value=t.entryReason||'Accurate Entry';id('exitReason').value=t.exitReason||'Target Hit';id('slFollowed').checked=!!t.slFollowed;id('revenge').checked=!!t.revenge;id('notes').value=t.notes||'';id('shot').value='';id('modal').style.display='flex'}
+function editTrade(i){
+let t=trades.find(x=>x.id===i);if(!t)return;
+id('editId').value=t.id;id('modalTitle').textContent='Edit Options Trade';
+id('instrument').value=t.instrument||'NIFTY';id('account').value=t.account||'Options';id('otype').value=t.otype||'CE';id('side').value=t.side||'Buy';
+id('strike').value=t.strike||'';id('expiry').value=t.expiry||'';id('entry').value=t.entry??'';id('exit').value=t.exit??'';
+id('qty').value=t.qty||1;id('lot').value=t.lot||1;id('sl').value=t.sl||'';id('target').value=t.target||'';
+id('charges').value=t.charges||0;id('score').value=t.score??80;id('strategy').value=t.strategy==='Unspecified'?'':(t.strategy||'');
+id('tradeDate').value=normalizeTradeDate(t.tradeDate||t.date);id('entryTime').value=t.entryTime||'';id('exitTime').value=t.exitTime||'';
+id('entryReason').value=t.entryReason||'Accurate Entry';id('exitReason').value=t.exitReason||'Target Hit';
+id('slFollowed').checked=!!t.slFollowed;id('revenge').checked=!!t.revenge;id('notes').value=t.notes||'';id('shot').value='';
+id('modal').style.display='flex'
+}
 function deleteTrade(i){if(!confirm('Delete this trade?'))return;trades=trades.filter(t=>t.id!==i);save();render()}
 function filtered(){let a=[...trades];if(filter==='win')a=a.filter(t=>t.pnl>0);if(filter==='loss')a=a.filter(t=>t.pnl<0);if(filter==='ce')a=a.filter(t=>t.otype==='CE');if(filter==='pe')a=a.filter(t=>t.otype==='PE');return a}
 function setFilter(f,el){filter=f;document.querySelectorAll('.pill').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderTrades()}
